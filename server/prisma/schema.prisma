@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String         @id @default(uuid())
+  name         String
+  email        String         @unique
+  role         String         @default("SALES_REP") // ADMIN, MANAGER, SALES_REP
+  title        String?
+  avatarUrl    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relations
+  assignmentsReceived Assignment[] @relation("AssignedToUser")
+  assignmentsGiven    Assignment[] @relation("AssignedByUser")
+  notifications       Notification[]
+}
+
+model Company {
+  id            String       @id @default(uuid())
+  name          String
+  industry      String
+  annualRevenue Float        @default(0.0)
+  status        String       @default("PROSPECT") // LEAD, PROSPECT, CUSTOMER, CHURNED
+  website       String?
+  phone         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  contacts    Contact[]
+  assignments Assignment[]
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  phone     String?
+  title     String?
+  status    String   @default("ACTIVE")
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  assignments Assignment[]
+}
+
+model Assignment {
+  id               String   @id @default(uuid())
+  role             String   // e.g. "Account Owner", "Lead Manager", "Technical Lead"
+  userId           String
+  user             User     @relation("AssignedToUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignedByUserId String
+  assignedByUser   User     @relation("AssignedByUser", fields: [assignedByUserId], references: [id], onDelete: Cascade)
+  companyId        String?
+  company          Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId        String?
+  contact          Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  message    String
+  type       String   @default("ASSIGNMENT") // ASSIGNMENT, REMINDER, SYSTEM, FOLLOWUP
+  entityType String   @default("GENERAL")    // COMPANY, CONTACT, GENERAL
+  entityId   String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
